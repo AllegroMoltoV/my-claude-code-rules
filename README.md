@@ -60,6 +60,7 @@ MIT License。詳細は [LICENSE](LICENSE) を参照してください。
 
 | バージョン | 日付 | 内容 |
 |---|---|---|
+| v2.2.0 | 2026-05-21 | プラン作成後に懸念点を `.prompts/DISCUSSIONS/` に洗い出し、推奨案を含む複数案を提示するフローを追加 |
 | v2.1.0 | 2026-05-20 | INIT.md に調査先行ステップを追加。プラン品質基準・自律的完結方針・docs 蓄積ルール・TDD 原則を追加 |
 | v2.0.1 | 2026-03-03 | `.prompts/INIT.md` を追加。`.prompts/` を Git 追跡対象に変更 |
 | v2.0.0 | 2026-03-03 | `.claude/rules/` 方式に移行。`SKILLS/` と `INIT.md` を廃止し `rules/` に統合。リポジトリ名を `my-claude-code-rules` に変更 |

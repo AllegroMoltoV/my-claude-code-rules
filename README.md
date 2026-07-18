@@ -61,7 +61,7 @@ MIT License。詳細は [LICENSE](LICENSE) を参照してください。
 
 | バージョン | 日付 | 内容 |
 |---|---|---|
-| v2.3.0 | 2026-07-12 | 過去セッションのメモリから汎用的な行動原則を抽出し `working-principles.md` を追加。日本語出力に不自然な半角スペースを入れない原則を、terminal 応答も含めた全出力に効くグローバル原則として `working-principles.md` に明記 (`documentation.md` は `**/*.md` にしか効かないため)。`documentation.md` 側にも半角スペースの適用範囲 (docs と terminal / UI / 投稿文案の切り分け) を追記。`testing.md` に mock の限界に関する注意を追加。`project.md` に多段階プランの初手集約とサブエージェント委譲の方針を追加。ツール呼び出しの XML 露出 (`court`・`course`・`count` 表示) によるセッション健全性の低下と、その予防・対処を `working-principles.md` に記載 |
+| v2.3.0 | 2026-07-18 | 過去セッションのメモリから汎用的な行動原則を抽出し `working-principles.md` を追加。日本語出力に不自然な半角スペースを入れない原則を、terminal 応答も含めた全出力に効くグローバル原則として `working-principles.md` に明記 (`documentation.md` は `**/*.md` にしか効かないため)。`documentation.md` 側にも半角スペースの適用範囲 (docs と terminal / UI / 投稿文案の切り分け) を追記。曖昧で広い意味を持つ言葉や、英語から直訳したような表現を避ける規約を明確化。`testing.md` に mock の限界に関する注意を追加。`project.md` に多段階プランの初手集約とサブエージェント委譲の方針を追加。ツール呼び出しの XML 露出 (`court`・`course`・`count` 表示) によるセッション健全性の低下と、その予防・対処を `working-principles.md` に記載 |
 | v2.2.0 | 2026-05-21 | プラン作成後に懸念点を `.prompts/DISCUSSIONS/` に洗い出し、推奨案を含む複数案を提示するフローを追加 |
 | v2.1.0 | 2026-05-20 | INIT.md に調査先行ステップを追加。プラン品質基準・自律的完結方針・docs 蓄積ルール・TDD 原則を追加 |
 | v2.0.1 | 2026-03-03 | `.prompts/INIT.md` を追加。`.prompts/` を Git 追跡対象に変更 |

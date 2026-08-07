@@ -2,11 +2,16 @@
 #
 # Beads のグローバル導入を取り消す。
 #
-#   ./scripts/teardown-beads.sh            # hook と運用ルールを削除する
-#   ./scripts/teardown-beads.sh --restore  # settings.json をバックアップから完全復元する
+#   ./scripts/teardown-beads.sh            # フックと運用ルールを削除する
+#   ./scripts/teardown-beads.sh --restore  # settings.json をバックアップから復元する
 #
-# bd CLI 自体は削除しない。削除する場合は導入時に使った方法で取り除くこと。
-# 各リポジトリの .beads/ も削除しない。タスク状態が失われるため手動で判断すること。
+# 依存コマンド
+#   bd と jq。いずれも本スクリプトは導入しない。未導入なら中止する。
+#
+# 戻さないもの
+#   bd CLI 自体。削除する場合は導入時に使った方法で取り除くこと。
+#   各リポジトリの .beads/。タスク状態が失われるため手動で判断すること。
+#   bd metrics の設定。無断で送信を再開させないため、状態を表示するだけにする。
 
 set -euo pipefail
 
@@ -25,6 +30,28 @@ STATE_CMD='bd list --status=in_progress 2>/dev/null; bd ready 2>/dev/null; bd bl
 STOP_CMD="${REPO_ROOT}/scripts/beads-stop-nudge.sh"
 
 echo "=== Beads グローバル導入の取り消し $(date '+%Y-%m-%d %H:%M:%S') ==="
+
+# 依存コマンドの確認。jq が無いと settings.json の編集が途中で止まり、部分適用になる。
+MISSING=0
+for cmd in bd jq; do
+  if command -v "${cmd}" >/dev/null 2>&1; then
+    echo "[skip] ${cmd} は導入済み"
+  else
+    echo "[fail] ${cmd} が見つかりません。導入してから再実行してください" >&2
+    MISSING=1
+  fi
+done
+if [ "${MISSING}" -ne 0 ]; then
+  echo "[fail] 依存コマンドが不足しているため中止した。設定は変更していない" >&2
+  exit 1
+fi
+
+# bd 公式の統合を削除する。--restore の経路でも実行する必要がある。
+# この操作はグローバルフックだけでなく、カレントディレクトリの CLAUDE.md に
+# 追記された Beads の管理ブロックも取り除く。settings.json の復元より前に
+# 実行することで、復元後のファイルがバックアップとバイト単位で一致する。
+echo "[run ] bd の統合を削除する"
+bd setup claude --global --remove || echo "[warn] bd setup claude --global --remove が失敗した"
 
 if [ "${1:-}" = "--restore" ]; then
   if [ ! -f "${BACKUP}" ]; then
@@ -53,9 +80,7 @@ else
   fi
   rm -f "${TMP}"
 
-  # bd 公式 hook を削除する
-  echo "[run ] bd prime の hook を削除する"
-  bd setup claude --global --remove || echo "[warn] bd setup claude --global --remove が失敗した"
+  # bd 公式の統合は分岐の前で削除済み。
 
   # 空になった hooks キーを取り除き、導入前の状態と完全に一致させる。
   # イベント名を列挙せず、空配列になったものを全て落とす。
@@ -76,12 +101,22 @@ else
   rm -f "${TMP2}"
 fi
 
-if [ -f "${RULES_DST}" ]; then
+# 配置した運用ルールを削除する。原本と内容が違う場合は、利用者が独自に加えた
+# 変更を黙って消さないよう警告だけ出す。
+RULES_SRC="${REPO_ROOT}/rules/beads.md"
+if [ ! -f "${RULES_DST}" ]; then
+  echo "[skip] 運用ルールは存在しない"
+elif [ -f "${RULES_SRC}" ] && ! diff -q "${RULES_SRC}" "${RULES_DST}" >/dev/null 2>&1; then
+  echo "[warn] 配置先が原本と異なるため削除しない: ${RULES_DST}"
+  echo "       差分の確認: diff '${RULES_SRC}' '${RULES_DST}'"
+else
   rm "${RULES_DST}"
   echo "[run ] 運用ルールを削除した: ${RULES_DST}"
-else
-  echo "[skip] 運用ルールは存在しない"
 fi
+
+# 匿名利用統計は自動で戻さない。無断で送信を再開させるべきではないため、
+# 現在の状態と戻す方法だけを伝える。
+echo "[info] 匿名利用統計は停止したままです。再開する場合は bd metrics on を実行してください"
 
 echo
 echo "=== 取り消し後の SessionStart hook ==="

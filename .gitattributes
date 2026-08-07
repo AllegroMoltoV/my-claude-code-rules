@@ -1,0 +1,2 @@
+*.sh text eol=lf
+exclude text eol=lf

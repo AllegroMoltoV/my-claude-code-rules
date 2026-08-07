@@ -20,6 +20,7 @@ Claude Code はコンテキスト圧縮 (compact) 時に `CLAUDE.md` と `.claud
 | `testing.md` | テスト失敗時の対処方針やカバレッジ目標など、テストに関する規約 |
 | `documentation.md` | 日本語技術文書の文体、表記ルール、構成方針に関するスタイルガイド。`**/*.md` に適用 |
 | `working-principles.md` | 事実の検証、調査の先行、報告文の書き方、外部操作や破壊的操作の扱いなど、作業の進め方に関する行動原則 |
+| `beads.md` | Beads によるタスク進行管理の運用ルール。状態の正本、記録するタイミング、決定の残し方 |
 
 ### .prompts/
 
@@ -29,29 +30,115 @@ Claude Code はコンテキスト圧縮 (compact) 時に `CLAUDE.md` と `.claud
 |---|---|
 | `INIT.md` | 初回セットアップ用 prompt。要件の記入欄、質問の洗い出し、作業ディレクトリの作成を指示する |
 
+### skills/
+
+Claude Code の skill です。`~/.claude/skills/` に配置して使用します。
+
+| ディレクトリ | 概要 |
+|---|---|
+| `project-bootstrap/` | 新しいプロジェクトの初期セットアップを一通り行う skill。環境の整備、要件の転記、現状の調査、長期タスクの登録、不明点の洗い出しまで進める |
+
+### scripts/
+
+セットアップと検証のスクリプトです。POSIX シェルで実行します。
+
+| ファイル | 概要 |
+|---|---|
+| `bootstrap.sh` | プロジェクトの初期セットアップ。ルールと skill の配置、git の初期化、除外設定、作業ディレクトリの作成を行う。何度実行しても結果が変わらない |
+| `lib/rules.sh` | ルールと skill の配置を扱う共通処理。シンボリックリンクを作れるかを実測し、作れない環境ではコピーへ切り替える |
+| `setup-beads.sh` | Beads をグローバルに導入する。`~/.claude/settings.json` にフックを追加する |
+| `teardown-beads.sh` | Beads の導入を取り消す。`--restore` で `settings.json` をバックアップから復元する |
+| `verify-beads.sh` | Beads の動作を検証する。使い捨てのリポジトリを作り、終了時に削除する |
+| `beads-stop-nudge.sh` | 記録漏れを防ぐフック。作業中のまま長時間更新されていないタスクを検出し、記録を促す |
+
 ### その他
 
 | ファイル | 概要 |
 |---|---|
 | `exclude` | `.git/info/exclude` の参照用コピー |
+| `.gitattributes` | スクリプトと `exclude` の改行を LF に固定する設定。CRLF ではシェルがスクリプトを実行できない |
+
+## 前提
+
+`scripts/` 配下のスクリプトは POSIX シェルで動きます。シェルが使えない環境では、後述の手動配置を行ってください。
+
+`setup-beads.sh` は `bd` と `jq` を必要とします。スクリプトはこれらを導入しません。未導入の場合は導入方法を Claude Code に尋ねてください。環境ごとに手段が異なるため、本リポジトリでは特定の方法を指定しません。
 
 ## 使い方
 
-### ルールの配置
+### 環境変数の設定
 
-`rules/` 配下のファイルを、対象プロジェクトの `.claude/rules/` にコピーしてください。
+`MY_CLAUDE_RULES` に、本リポジトリを clone した位置を設定してください。skill と `INIT.md` はこの変数からスクリプトの位置を解決します。
 
-`.claude/rules/` は Claude Code がセッション開始時に自動で読み込みます。コンテキスト圧縮 (compact) 後もルールが維持されます。
+Claude Code のツール呼び出しは非対話シェルで動きます。そのため `~/.bashrc` のような対話シェル向けの設定ファイルに書いても、値が届かないことがあります。`~/.claude/settings.json` の `env` は Claude Code のセッションに対して環境変数を設定する仕組みで、シェルの初期化に依存しません。
 
-### Git 除外設定
+```json
+{
+  "env": {
+    "MY_CLAUDE_RULES": "<clone した位置>"
+  }
+}
+```
 
-`git init` 実行後、`.git/info/exclude` の内容を本リポジトリの `exclude` で置き換えてください。`.claude`、`.prompts`、`CLAUDE.md` などの Claude Code 関連ファイルが Git の追跡対象から除外されます。
+### セットアップスクリプトの実行
+
+対象プロジェクトのディレクトリで実行してください。同じ状態に対して何度実行しても、配置内容は変わりません。実行ごとに時刻付きのログが `.logs/` に増えます。
+
+```bash
+bash "${MY_CLAUDE_RULES}/scripts/bootstrap.sh"
+```
+
+スクリプトはルールと skill を `~/.claude/` へ配置します。対象プロジェクトには、git の初期化、除外設定の追記、作業ディレクトリの作成、`.prompts/INIT.md` の配置を行います。リポジトリ自身には書き込みません。
+
+Beads を使わないプロジェクトでは、先に `touch .beads-optout` を実行してください。
+
+配置は既定でシンボリックリンクです。原本を編集すれば即座に反映されます。
+
+**シンボリックリンクを作れない環境では、自動的にコピーへ切り替わります。** その場合は `(この環境は symlink 非対応)` と表示されます。
+
+コピーではリポジトリを更新しても `~/.claude/` へ自動では反映されません。`git pull` のあとに `bootstrap.sh` を再実行してください。内容が異なるファイルは原本の内容で上書きされ、`[run ] 原本の内容で更新した` と表示されます。
+
+このため `~/.claude/rules/` のファイルを直接編集しても、次回の実行で失われます。環境ごとに内容を足す場合は、原本側で管理してください。
+
+### 手動での配置
+
+シェルが使えない環境では、`rules/` 配下のファイルを対象プロジェクトの `.claude/rules/` にコピーしてください。`.claude/rules/` は Claude Code がセッション開始時に自動で読み込み、コンテキスト圧縮 (compact) 後もルールが維持されます。
+
+あわせて `.git/info/exclude` に本リポジトリの `exclude` の各行を追記し、`.prompts/INIT.md` をコピーしてください。追記であって置き換えではありません。`.git/info/exclude` には Git が生成したコメントや、そのリポジトリ固有の除外設定が既にある場合があります。`bootstrap.sh` も不足している行だけを追記します。
 
 ### 初回セットアップ
 
-対象プロジェクトに `.prompts/` ディレクトリを作成し、`.prompts/INIT.md` をコピーしてください。
+`.prompts/INIT.md` の要件、前提と制約、完了の定義を記入したうえで、Claude Code にこのファイルの実行を依頼してください。Claude Code が現状を調査し、不明点を `.prompts/QUESTIONS.md` に洗い出します。回答を待ってから次の作業に進みます。
 
-要件セクションを記入したうえで、Claude Code に `.prompts/INIT.md` の実行を依頼してください。作業ディレクトリの作成と要件の不明点の洗い出しが行われます。
+`project-bootstrap` skill を新規登録した直後は、Claude Code を再起動するまで skill が認識されません。
+
+### Beads の導入
+
+タスク進行管理を使う場合のみ実行します。
+
+```bash
+bash "${MY_CLAUDE_RULES}/scripts/setup-beads.sh"
+```
+
+スクリプトは `~/.claude/settings.json` にフックを 3 件追加します。追加前のバックアップを `settings.json.pre-beads.bak` として作成します。
+
+このうち 1 件は Stop フックです。作業中のまま 15 分以上更新されていないタスクがあると、応答の終了を止めて記録を促します。応答が 1 往復増えることがあります。発火は 15 分あたり最大 1 回に制限されており、間隔は環境変数 `BD_STOP_STALE_SEC` と `BD_STOP_COOLDOWN_SEC` で変えられます。
+
+取り消しは次のコマンドで行います。
+
+```bash
+bash "${MY_CLAUDE_RULES}/scripts/teardown-beads.sh" --restore
+```
+
+`--restore` が戻すのは `settings.json` だけです。次のものは残るため、必要なら手作業で取り除いてください。
+
+- `bd` が対象プロジェクトの `CLAUDE.md` に追記した Beads の管理ブロック
+- `bd metrics off` で停止した匿名利用統計の設定
+- `settings.json.pre-beads.bak` と `.logs/` 配下のログ
+
+`bd` コマンド本体と各リポジトリの `.beads/` も削除しません。タスクの状態が失われるためです。
+
+取り消しにも `jq` が必要です。`jq` が無い状態では途中で停止します。
 
 ## ライセンス
 
@@ -61,6 +148,7 @@ MIT License。詳細は [LICENSE](LICENSE) を参照してください。
 
 | バージョン | 日付 | 内容 |
 |---|---|---|
+| v2.4.0 | 2026-08-07 | Beads によるタスク進行管理と、プロジェクト初期セットアップの自動化を追加。`rules/beads.md`、`skills/project-bootstrap/`、`scripts/` のスクリプト 6 本を新規追加。`.prompts/INIT.md` を、要件と前提と完了の定義を記入する形へ置き換え、手順は skill に委譲。スクリプトの位置を環境変数 `MY_CLAUDE_RULES` で解決する方式に変更。`.gitattributes` を追加し、シェルスクリプトと `exclude` の改行を LF に固定。CRLF が原因で除外設定の追記が冪等でなくなる問題を解消。`setup-beads.sh` から特定のパッケージ管理への依存を除去し、依存コマンドの確認のみを行う形に変更 |
 | v2.3.0 | 2026-07-18 | 過去セッションのメモリから汎用的な行動原則を抽出し `working-principles.md` を追加。日本語出力に不自然な半角スペースを入れない原則を、terminal 応答も含めた全出力に効くグローバル原則として `working-principles.md` に明記 (`documentation.md` は `**/*.md` にしか効かないため)。`documentation.md` 側にも半角スペースの適用範囲 (docs と terminal / UI / 投稿文案の切り分け) を追記。曖昧で広い意味を持つ言葉や、英語から直訳したような表現を避ける規約を明確化。`testing.md` に mock の限界に関する注意を追加。`project.md` に多段階プランの初手集約とサブエージェント委譲の方針を追加。ツール呼び出しの XML 露出 (`court`・`course`・`count` 表示) によるセッション健全性の低下と、その予防・対処を `working-principles.md` に記載 |
 | v2.2.0 | 2026-05-21 | プラン作成後に懸念点を `.prompts/DISCUSSIONS/` に洗い出し、推奨案を含む複数案を提示するフローを追加 |
 | v2.1.0 | 2026-05-20 | INIT.md に調査先行ステップを追加。プラン品質基準・自律的完結方針・docs 蓄積ルール・TDD 原則を追加 |

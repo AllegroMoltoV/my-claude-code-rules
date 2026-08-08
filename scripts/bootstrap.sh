@@ -1,11 +1,22 @@
 #!/usr/bin/env bash
 #
-# プロジェクトの初期セットアップ。何度実行しても結果が変わらない (冪等)。
+# セットアップ。何度実行しても結果が変わらない (冪等)。
 #
-#   cd <新しいプロジェクト>
-#   <このリポジトリ>/scripts/bootstrap.sh
+# 2 つのフェーズを扱う。目的が違うため、どちらを行うのかを明示して実行する。
+#
+#   A. グローバルの初回セットアップ (機械ごとに 1 回)
+#      ルールと skill を ~/.claude/ へ配置する。プロジェクトには触らない。
+#
+#        <このリポジトリ>/scripts/bootstrap.sh --global-only
+#
+#   B. プロジェクトのセットアップ (プロジェクトごと)
+#      A に加えて、対象プロジェクトを開始可能な状態にする。
+#
+#        cd <新しいプロジェクト>
+#        <このリポジトリ>/scripts/bootstrap.sh
 #
 # オプション
+#   --global-only         A だけを行う。プロジェクトには一切書き込まない
 #   --with-project-rules  rules をプロジェクトの .claude/rules/ にもコピーする
 #                         (既定はグローバル一本化。他マシンへ持ち出すときだけ使う)
 #   --no-beads            Beads の初期化を行わない
@@ -25,30 +36,43 @@ RULES_REPO="${REPO_ROOT}"
 # shellcheck source=lib/rules.sh
 . "${REPO_ROOT}/scripts/lib/rules.sh"
 
+GLOBAL_ONLY=0
 WITH_PROJECT_RULES=0
 USE_BEADS=1
 TARGET="${PWD}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --global-only)        GLOBAL_ONLY=1; shift ;;
     --with-project-rules) WITH_PROJECT_RULES=1; shift ;;
     --no-beads)           USE_BEADS=0; shift ;;
     --target)             TARGET="$2"; shift 2 ;;
-    -h|--help)            sed -n '2,19p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)            sed -n '2,30p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "不明なオプション: $1" >&2; exit 1 ;;
   esac
 done
 
-mkdir -p "${TARGET}"
-TARGET="$(cd "${TARGET}" && pwd)"
-mkdir -p "${TARGET}/.logs"
-LOG_FILE="${TARGET}/.logs/bootstrap-$(date +%Y%m%d-%H%M%S).log"
+# ログの置き場所はフェーズで変わる。--global-only では対象プロジェクトが無いため、
+# 呼び出し元のディレクトリを汚さないようリポジトリ側へ書く。
+if [ "${GLOBAL_ONLY}" -eq 1 ]; then
+  mkdir -p "${REPO_ROOT}/.logs"
+  LOG_FILE="${REPO_ROOT}/.logs/bootstrap-global-$(date +%Y%m%d-%H%M%S).log"
+else
+  mkdir -p "${TARGET}"
+  TARGET="$(cd "${TARGET}" && pwd)"
+  mkdir -p "${TARGET}/.logs"
+  LOG_FILE="${TARGET}/.logs/bootstrap-$(date +%Y%m%d-%H%M%S).log"
+fi
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
 CLAUDE_DIR="${HOME}/.claude"
 
-echo "=== プロジェクト初期セットアップ $(date '+%Y-%m-%d %H:%M:%S') ==="
-echo "対象:     ${TARGET}"
+if [ "${GLOBAL_ONLY}" -eq 1 ]; then
+  echo "=== グローバルの初回セットアップ $(date '+%Y-%m-%d %H:%M:%S') ==="
+else
+  echo "=== プロジェクトのセットアップ $(date '+%Y-%m-%d %H:%M:%S') ==="
+  echo "対象:     ${TARGET}"
+fi
 echo "ルール元: ${RULES_REPO} (読み取り専用)"
 echo
 
@@ -81,6 +105,16 @@ SKILL_NEW=0
 link_dir "${REPO_ROOT}/skills/project-bootstrap" "${SKILL_DST}"
 
 echo
+
+if [ "${GLOBAL_ONLY}" -eq 1 ]; then
+  echo "=== 完了 ==="
+  echo "ログ: ${LOG_FILE}"
+  echo
+  echo "次の手順"
+  echo "  1. Claude Code を再起動する (skill を認識させるため)"
+  echo "  2. プロジェクト用のフォルダを作り、.prompts/INIT.md をコピーして実行を依頼する"
+  exit 0
+fi
 
 # ---------------------------------------------------------------------------
 echo "B. プロジェクト"

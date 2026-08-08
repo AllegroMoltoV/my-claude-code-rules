@@ -62,13 +62,16 @@ if [ "${1:-}" = "--restore" ]; then
   echo "[run ] settings.json をバックアップから復元した"
 else
   # 状態復元 hook と記録漏れ通知 hook を削除する
+  # Stop はスクリプト名で判定する。完全一致にすると、リポジトリを移設したあとに
+  # 古いパスのエントリを取り除けない。setup 側と同じ判定にそろえている。
   TMP="$(mktemp)"
-  jq --arg cmd "${STATE_CMD}" --arg stop "${STOP_CMD}" '
+  jq --arg cmd "${STATE_CMD}" '
+    def is_nudge: (.hooks // []) | map(.command? // "") | any(endswith("beads-stop-nudge.sh"));
     (if (.hooks.SessionStart? | type) == "array" then
       .hooks.SessionStart |= map(select(([.hooks[]?.command] | index($cmd)) | not))
     else . end)
     | (if (.hooks.Stop? | type) == "array" then
-      .hooks.Stop |= map(select(([.hooks[]?.command] | index($stop)) | not))
+      .hooks.Stop |= map(select(is_nudge | not))
     else . end)
   ' "${SETTINGS}" > "${TMP}"
 

@@ -100,7 +100,15 @@ if [ ! -f "${SETTINGS}" ]; then
 fi
 
 TMP="$(mktemp)"
+# SessionStart はコマンド文字列がパスを含まないため、完全一致で判定できる。
+#
+# Stop はスクリプトの絶対パスを持つ。リポジトリの位置が変わると文字列が一致せず、
+# 完全一致で判定すると古いエントリが残ったまま新しいエントリが増える。実際に
+# 移設した環境で、同じ通知が 2 回発火する状態が発生した。
+# そこでスクリプト名で判定し、該当するエントリをすべて取り除いてから現在のパスで
+# 1 件だけ追加する。位置は末尾になる。
 jq --arg cmd "${STATE_CMD}" --arg stop "${STOP_CMD}" '
+  def is_nudge: (.hooks // []) | map(.command? // "") | any(endswith("beads-stop-nudge.sh"));
   .hooks //= {}
   | .hooks.SessionStart //= []
   | .hooks.Stop //= []
@@ -108,10 +116,10 @@ jq --arg cmd "${STATE_CMD}" --arg stop "${STOP_CMD}" '
     then .
     else .hooks.SessionStart += [{"matcher": "", "hooks": [{"type": "command", "command": $cmd}]}]
     end
-  | if ([.hooks.Stop[]?.hooks[]?.command] | index($stop))
-    then .
-    else .hooks.Stop += [{"matcher": "", "hooks": [{"type": "command", "command": $stop}]}]
-    end
+  | .hooks.Stop |= (
+      map(select(is_nudge | not))
+      + [{"matcher": "", "hooks": [{"type": "command", "command": $stop}]}]
+    )
 ' "${SETTINGS}" > "${TMP}"
 
 if [ ! -s "${TMP}" ] || ! jq -e . "${TMP}" >/dev/null 2>&1; then

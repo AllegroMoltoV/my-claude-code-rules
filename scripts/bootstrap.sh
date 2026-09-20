@@ -90,6 +90,14 @@ echo "A. グローバル資産"
 
 mkdir -p "${CLAUDE_DIR}/rules"
 
+# local.md は PC 固有ルール専用の名前として予約する。リポジトリ側が同名を持つと、
+# 配置先の PC 固有ルールを原本の内容で上書きしてしまうため、その場合は中止する。
+if [ "${HAS_RULES_REPO}" -eq 1 ] && [ -f "${RULES_REPO}/rules/local.md" ]; then
+  echo "  [warn] rules/local.md は PC 固有ルール用に予約された名前である"
+  echo "         ~/.claude/rules/local.md を上書きするため中止する"
+  exit 1
+fi
+
 # 公開リポジトリ由来の開発ルール
 if [ "${HAS_RULES_REPO}" -eq 1 ]; then
   for src in "${RULES_REPO}"/rules/*.md; do

@@ -186,9 +186,10 @@ context compaction で文脈が失われた場合は、この索引から必要�
 | 調査レポート | `docs/reports/` |
 | 実行ログ (生の出力。git 追跡対象外) | `.logs/` |
 | 実行ログ (残す価値があると判断したもの) | `docs/logs/` |
-| 計画 | `.prompts/PLANS/` |
-| 判断を要する論点 | `.prompts/DISCUSSIONS/` |
-| タスクの状態、依存関係、blocker | `bd ready` / `bd blocked` / `bd list` |
+| 計画と決定事項 (Beads 使用時の正本) | `bd show <親課題>` |
+| 計画 (Beads 非使用時) | `.prompts/PLANS/` |
+| 判断を要する論点 (Beads 非使用時) | `.prompts/DISCUSSIONS/` |
+| タスクの状態、依存関係、ブロッカー | `bd ready` / `bd blocked` / `bd list` |
 INDEXEOF
   echo "  [run ] docs/INDEX.md の雛形を作成した"
 fi
@@ -228,7 +229,7 @@ echo "ログ: ${LOG_FILE}"
 echo
 echo "次の手順"
 echo "  1. .prompts/INIT.md の要件セクションを記入する"
-echo "  2. Claude Code に .prompts/INIT.md の実行を依頼する"
+echo "  2. Claude Code に '/project-bootstrap を使って .prompts/INIT.md を実行してください' と依頼する"
 if [ "${SKILL_NEW}" -eq 1 ]; then
   echo
   echo "skill を新規登録した。Claude Code を再起動すると /project-bootstrap が使えるようになる。"

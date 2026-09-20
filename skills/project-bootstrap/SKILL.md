@@ -23,7 +23,7 @@ bash "${MY_CLAUDE_RULES}/scripts/bootstrap.sh"
 - `~/.claude/rules/` へのルール配置と、本 skill の symlink 登録
 - git リポジトリの初期化 (ブランチは main)
 - `.git/info/exclude` への除外設定の追記
-- `.appendix`、`.tmp`、`.logs`、`.prompts/PLANS`、`.prompts/DISCUSSIONS`、`docs/reports`、`docs/logs` の作成
+- `.appendix`、`.tmp`、`.logs`、`.prompts/PLANS`、`.prompts/DISCUSSIONS`、`docs/reports`、`docs/logs` の作成 (`.prompts/PLANS` と `.prompts/DISCUSSIONS` は Beads を使わないプロジェクト向け)
 - `.prompts/INIT.md` の配置
 - `docs/INDEX.md` の雛形作成
 - Beads の初期化 (`bd init --stealth --skip-agents --non-interactive --init-if-missing`)
@@ -63,6 +63,8 @@ bd dep add <後続タスク> <先行タスク>
 ```
 
 数分から数十分で終わる単発作業は登録しない。迷ったときは登録する。
+
+Beads を使うプロジェクトでは、親課題が計画と決定事項の正本になる。`--description` に目的と範囲、`--design` に計画と決定事項、`--acceptance` に完了条件を入れる。
 
 ### 5. 不明点の洗い出し
 

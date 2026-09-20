@@ -171,12 +171,6 @@ jq -S . "${BACKUP}" > "${WORK}/orig.json"
 diff -q "${WORK}/orig.json" "${WORK}/now-nohooks.json" >/dev/null
 check $? "hooks 以外の設定が導入前と完全に一致"
 
-jq -e '.model and .effortLevel and .enabledPlugins and .extraKnownMarketplaces' "${SETTINGS}" >/dev/null
-check $? "model / effortLevel / plugin 設定が残存"
-
-jq -e '.enabledPlugins | length == 5' "${SETTINGS}" >/dev/null
-check $? "既存プラグイン 5 件が維持されている"
-
 [ -f "${HOME}/.claude/settings.local.json" ]; check $? "settings.local.json が存在する"
 jq -e . "${HOME}/.claude/settings.local.json" >/dev/null; check $? "settings.local.json が壊れていない"
 

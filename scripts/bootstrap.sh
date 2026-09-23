@@ -107,10 +107,13 @@ fi
 
 # skill
 mkdir -p "${CLAUDE_DIR}/skills"
-SKILL_DST="${CLAUDE_DIR}/skills/project-bootstrap"
 SKILL_NEW=0
-[ -e "${SKILL_DST}" ] || SKILL_NEW=1
-link_dir "${REPO_ROOT}/skills/project-bootstrap" "${SKILL_DST}"
+for skill_src in "${REPO_ROOT}"/skills/*/; do
+  skill_src="${skill_src%/}"
+  skill_dst="${CLAUDE_DIR}/skills/$(basename "${skill_src}")"
+  [ -e "${skill_dst}" ] || SKILL_NEW=1
+  link_dir "${skill_src}" "${skill_dst}"
+done
 
 echo
 
@@ -240,5 +243,5 @@ echo "  1. .prompts/INIT.md の要件セクションを記入する"
 echo "  2. Claude Code に '/project-bootstrap を使って .prompts/INIT.md を実行してください' と依頼する"
 if [ "${SKILL_NEW}" -eq 1 ]; then
   echo
-  echo "skill を新規登録した。Claude Code を再起動すると /project-bootstrap が使えるようになる。"
+  echo "skill を新規登録した。Claude Code を再起動すると新しい skill が使えるようになる。"
 fi

@@ -52,16 +52,24 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# ログ名は yyyymmddnn-<name>.log。nn は同じ日付・同じディレクトリ内の連番。
+next_log() {
+  local dir="$1" name="$2" day n=1
+  day="$(date +%Y%m%d)"
+  while compgen -G "${dir}/${day}$(printf '%02d' "${n}")-*" >/dev/null; do n=$((n + 1)); done
+  printf '%s/%s%02d-%s.log' "${dir}" "${day}" "${n}" "${name}"
+}
+
 # ログの置き場所はフェーズで変わる。--global-only では対象プロジェクトが無いため、
 # 呼び出し元のディレクトリを汚さないようリポジトリ側へ書く。
 if [ "${GLOBAL_ONLY}" -eq 1 ]; then
   mkdir -p "${REPO_ROOT}/.logs"
-  LOG_FILE="${REPO_ROOT}/.logs/bootstrap-global-$(date +%Y%m%d-%H%M%S).log"
+  LOG_FILE="$(next_log "${REPO_ROOT}/.logs" bootstrap-global)"
 else
   mkdir -p "${TARGET}"
   TARGET="$(cd "${TARGET}" && pwd)"
   mkdir -p "${TARGET}/.logs"
-  LOG_FILE="${TARGET}/.logs/bootstrap-$(date +%Y%m%d-%H%M%S).log"
+  LOG_FILE="$(next_log "${TARGET}/.logs" bootstrap)"
 fi
 exec > >(tee -a "${LOG_FILE}") 2>&1
 

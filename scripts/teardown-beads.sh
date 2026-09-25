@@ -18,7 +18,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="${REPO_ROOT}/.logs"
 mkdir -p "${LOG_DIR}"
-LOG_FILE="${LOG_DIR}/teardown-beads-$(date +%Y%m%d-%H%M%S).log"
+# ログ名は yyyymmddnn-<name>.log。nn は同じ日付・同じディレクトリ内の連番。
+LOG_DAY="$(date +%Y%m%d)"
+LOG_SEQ=1
+while compgen -G "${LOG_DIR}/${LOG_DAY}$(printf '%02d' "${LOG_SEQ}")-*" >/dev/null; do LOG_SEQ=$((LOG_SEQ + 1)); done
+LOG_FILE="$(printf '%s/%s%02d-teardown-beads.log' "${LOG_DIR}" "${LOG_DAY}" "${LOG_SEQ}")"
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
 CLAUDE_DIR="${HOME}/.claude"

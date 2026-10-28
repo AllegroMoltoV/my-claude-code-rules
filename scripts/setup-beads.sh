@@ -113,10 +113,11 @@ TMP="$(mktemp)"
 # そこでスクリプト名で判定し、該当するエントリをすべて取り除いてから現在のパスで
 # 1 件だけ追加する。位置は末尾になる。
 #
-# bd init --stealth は初期化のたびにグローバルの ~/.config/bd/config.yaml へ
-# no-git-ops: true を書き戻し、bd prime が「git 操作をしない」と注入するようになる
-# (bd 1.1.2 で実測)。環境変数はこの yaml より優先されるため、Claude Code の env で
-# false に固定する。利用者が値を設定済みなら、その値を尊重して上書きしない。
+# bd init --stealth は、グローバルの ~/.config/bd/config.yaml があり、リポジトリ側の
+# .beads/config.yaml がまだ無いとき、no-git-ops: true をグローバルへ書くことがある
+# (bd 1.1.2 で実測、1.3.2 まで同じ処理)。そうなると、どのリポジトリでも bd prime が
+# 「git 操作をしない」と注入する。環境変数はこの yaml より優先されるため、Claude Code の
+# env で false に固定する。依頼者が値を設定済みなら、その値を尊重して上書きしない。
 jq --arg cmd "${STATE_CMD}" --arg stop "${STOP_CMD}" '
   def is_nudge: (.hooks // []) | map(.command? // "") | any(endswith("beads-stop-nudge.sh"));
   .env //= {}

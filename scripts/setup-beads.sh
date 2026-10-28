@@ -13,6 +13,7 @@
 #   3. ~/.claude/settings.json のバックアップ (初回のみ)
 #   4. bd 公式のグローバル SessionStart hook を導入 (bd prime)
 #   5. タスク状態を復元する SessionStart hook を追加 (重複時は追加しない)
+#      あわせて env に BD_NO_GIT_OPS=false を設定 (未設定のときだけ)
 #   6. ~/.claude/rules/beads.md に運用ルールを配置
 
 set -euo pipefail
@@ -111,9 +112,16 @@ TMP="$(mktemp)"
 # 移設した環境で、同じ通知が 2 回発火する状態が発生した。
 # そこでスクリプト名で判定し、該当するエントリをすべて取り除いてから現在のパスで
 # 1 件だけ追加する。位置は末尾になる。
+#
+# bd init --stealth は初期化のたびにグローバルの ~/.config/bd/config.yaml へ
+# no-git-ops: true を書き戻し、bd prime が「git 操作をしない」と注入するようになる
+# (bd 1.1.2 で実測)。環境変数はこの yaml より優先されるため、Claude Code の env で
+# false に固定する。利用者が値を設定済みなら、その値を尊重して上書きしない。
 jq --arg cmd "${STATE_CMD}" --arg stop "${STOP_CMD}" '
   def is_nudge: (.hooks // []) | map(.command? // "") | any(endswith("beads-stop-nudge.sh"));
-  .hooks //= {}
+  .env //= {}
+  | .env.BD_NO_GIT_OPS //= "false"
+  | .hooks //= {}
   | .hooks.SessionStart //= []
   | .hooks.Stop //= []
   | if ([.hooks.SessionStart[]?.hooks[]?.command] | index($cmd))
@@ -133,12 +141,12 @@ if [ ! -s "${TMP}" ] || ! jq -e . "${TMP}" >/dev/null 2>&1; then
 fi
 
 if diff -q "${SETTINGS}" "${TMP}" >/dev/null 2>&1; then
-  echo "[skip] SessionStart と Stop の hook は導入済み"
+  echo "[skip] SessionStart と Stop の hook、BD_NO_GIT_OPS は導入済み"
   rm -f "${TMP}"
 else
   cat "${TMP}" > "${SETTINGS}"
   rm -f "${TMP}"
-  echo "[run ] SessionStart と Stop の hook を追加した"
+  echo "[run ] SessionStart と Stop の hook、BD_NO_GIT_OPS を追加した"
 fi
 
 # 6. 運用ルール (symlink で配置。コピーしないためドリフトが起きない)

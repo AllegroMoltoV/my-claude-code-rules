@@ -123,6 +123,15 @@ for skill_src in "${REPO_ROOT}"/skills/*/; do
   link_dir "${skill_src}" "${skill_dst}"
 done
 
+# 規約フック。settings.json の書き換えは setup-hooks.sh に任せ、ここでは登録の有無だけを見る。
+if command -v jq >/dev/null 2>&1 && [ -f "${CLAUDE_DIR}/settings.json" ] \
+  && jq -e '[.hooks.PostToolUse[]?.hooks[]?.command // ""] | any(endswith("md-lint.py"))' "${CLAUDE_DIR}/settings.json" >/dev/null 2>&1; then
+  echo "  [skip] 規約フックは登録済み"
+else
+  echo "  [warn] 規約フックが登録されていない"
+  echo "         導入: ${REPO_ROOT}/scripts/setup-hooks.sh"
+fi
+
 echo
 
 if [ "${GLOBAL_ONLY}" -eq 1 ]; then

@@ -14,7 +14,8 @@ Claude Code はコンテキスト圧縮 (compact) 時に `CLAUDE.md` と `.claud
 2. `~/.claude/settings.json` の `env` に `MY_CLAUDE_RULES` を設定する。値は clone した位置
 3. `bash "${MY_CLAUDE_RULES}/scripts/bootstrap.sh" --global-only` を実行する
 4. Beads でタスク管理をするなら `bash "${MY_CLAUDE_RULES}/scripts/setup-beads.sh"` も実行する
-5. Claude Code を再起動する
+5. 規約をフックで守らせるなら `bash "${MY_CLAUDE_RULES}/scripts/setup-hooks.sh"` も実行する
+6. Claude Code を再起動する
 
 ```json
 {
@@ -26,7 +27,7 @@ Claude Code はコンテキスト圧縮 (compact) 時に `CLAUDE.md` と `.claud
 
 `--global-only` はルールとスキルを `~/.claude/` へ配置するだけで、プロジェクトには触りません。
 
-`setup-beads.sh` は `bd` と `jq` を必要とします。スクリプトはこれらを導入しません。未導入なら中止するので、導入方法は Claude Code に尋ねてください。
+`setup-beads.sh` は `bd` と `jq` を、`setup-hooks.sh` は `jq` と `python3` を必要とします。スクリプトはこれらを導入しません。未導入なら中止するので、導入方法は Claude Code に尋ねてください。
 
 環境変数をシェルの設定ファイルではなく `settings.json` に書く理由は、Claude Code のツール呼び出しが非対話シェルで動くためです。`~/.bashrc` に書いても値が届かないことがあります。
 
@@ -62,7 +63,7 @@ Claude Code はコンテキスト圧縮 (compact) 時に `CLAUDE.md` と `.claud
 | `rules/` | 開発ルール 5 ファイル。プロジェクト管理、テスト、文体、作業の進め方、Beads の運用 |
 | `skills/project-bootstrap/` | プロジェクト初期セットアップのスキル |
 | `skills/technical-blog-writing/` | 技術ブログの執筆戦略、初稿、改稿、校正のスキル。日本語の記法は `documentation.md` にしたがう |
-| `scripts/` | 配置と Beads の導入、検証、取り消しのスクリプト 6 本 |
+| `scripts/` | 配置、Beads と規約フックの導入、検証、取り消しのスクリプト |
 | `.prompts/INIT.md` | プロジェクトの入口となる要件シート |
 | `exclude` | `.git/info/exclude` の参照用コピー |
 | `.gitattributes` | スクリプトと Markdown の改行を LF に固定 |
@@ -73,7 +74,7 @@ Claude Code はコンテキスト圧縮 (compact) 時に `CLAUDE.md` と `.claud
 
 **`rules/` に `README.md` を置いてはいけません。** `bootstrap.sh` が `rules/*.md` を配置対象にするため、ルールとして読み込まれます。
 
-`scripts/` の内訳は次のとおりです。いずれも POSIX シェルで動き、何度実行しても結果が変わりません。
+`scripts/` の内訳は次のとおりです。導入用のスクリプトは POSIX シェルで動き、何度実行しても結果が変わりません。フック本体は、引用符を含むコマンドや Markdown を正確に字句へ分けるため Python で書いています。
 
 | ファイル | 用途 |
 |---|---|
@@ -83,6 +84,9 @@ Claude Code はコンテキスト圧縮 (compact) 時に `CLAUDE.md` と `.claud
 | `teardown-beads.sh` | Beads の導入を取り消す |
 | `verify-beads.sh` | Beads の動作を検証する |
 | `beads-stop-nudge.sh` | 記録漏れを促す Stop フック |
+| `setup-hooks.sh` | 規約フックを `~/.claude/settings.json` へ追加 |
+| `hooks/bash-guard.py` | `cd <dir> &&` の連結と `git -C` を実行前に止める PreToolUse フック |
+| `hooks/md-lint.py` | Markdown の全角かっこ・全角コロンと、日本語に隣接するダブルクオートを指摘する PostToolUse フック |
 
 ## 補足
 
@@ -98,6 +102,8 @@ Claude Code はコンテキスト圧縮 (compact) 時に `CLAUDE.md` と `.claud
 
 **Stop フックは応答の終了を止めません。** `decision: block` を返しますが、Claude Code 2.1.224 ではこれが提案として扱われます。記録を強制する仕組みではなく、記録漏れに気づかせる仕組みです。発火の間隔は `BD_STOP_STALE_SEC` と `BD_STOP_COOLDOWN_SEC` で変えられます。
 
+**規約フックが止めるのは、字句で確実に判定できる規則だけです。** `&&` や `|` の連結全般は、制御構文やコマンド置換に正当な用法があり誤検出と見逃しが避けられないため、文章の規約に任せています。`md-lint.py` は書き込みを取り消さず、違反の箇所を Claude へ返して修正させます。検査するのは作業中のディレクトリの配下にある `.md` だけで、フロントマターとコードは除きます。
+
 ## ライセンス
 
 MIT License。詳細は [LICENSE](LICENSE) を参照してください。
@@ -108,6 +114,7 @@ MIT License。詳細は [LICENSE](LICENSE) を参照してください。
 
 | バージョン | 日付 | 内容 |
 |---|---|---|
+| v2.23.0 | 2026-10-28 | 技術ブログの調査で集めた論文と公式ドキュメントに基づいて更新した。例外のない規則を文章の強調ではなくフックで守らせるため、`cd <dir> &&` の連結と `git -C` を止める `bash-guard.py`、Markdown の全角かっこ・全角コロン・日本語に隣接するダブルクオートを指摘する `md-lint.py`、それらを登録する `setup-hooks.sh` を追加した。`bootstrap.sh` は未登録のときに導入を案内する。Claude Code に作業を依頼する人の呼び名を「依頼者」に統一し、開発対象のプロダクトの利用者と区別する定義を `working-principles.md` に置いた。`beads.md` には、会話で受けた一時的な制約を `bd remember` に書いて圧縮後も残す規則 (キーにセッション ID を入れ、ほかのセッションの制約には従わない)、新しい事実で前提が崩れた決定の見直しを提案させる規則、提供先への影響で決める優先度の基準を追加した。`bd init --stealth` が初期化のたびに `no-git-ops: true` を書き戻す問題に対し、`setup-beads.sh` が `settings.json` の `env` に `BD_NO_GIT_OPS=false` を設定するようにした (設定済みの値は上書きしない) |
 | v2.22.0 | 2026-10-28 | `technical-blog-writing` スキルに執筆と改稿の規則を追加した。記事の筋を 1 本に絞り、自明な結果を短く済ませ、読者が持ち帰れる具体的な要素を題名・`excerpt`・「はじめに」で前に出させる。抜粋は原文のまま載せ、(中略) は省いた行を示す独立した 1 行にだけ使い、外国語の文献は原文を併記させる。公式ドキュメントの引用は主張の根拠に欠かせないものへ絞らせる。`excerpt` の 2 文固定をやめ、試みたことから「結論としては、」でつないで結論を示す形へ改めた。「はじめに」・考察・まとめの書き方、経験をまとめる記事での言い回し、執筆者の過去記事の紹介方法を追加した。改稿では、利用者が推敲した箇所は明確な誤りだけを直させ、構成にかかわる指摘には記事全体を通読して書き直させ、追加検証は実施した順に方法と結果を並べさせる |
 | v2.21.0 | 2026-09-26 | Codex 版 v1.18.0 に追従した。記憶の置き場所を Beads とルールファイルに集約し、Claude Code の auto memory へ記録することを `beads.md` で禁止した。利用者の好みと作業の進め方はルールファイル、PC 固有の環境の事実は `~/.claude/rules/local.md`、リポジトリに限った指示は `bd remember` へ振り分け、既存の auto memory は移したうえで削除する。`working-principles.md` と `technical-blog-writing` スキルの auto memory への言及も書き換えた。`project.md` には、`.prompts/DRAFT/`・`.tmp/`・`.logs/` のファイルを各ディレクトリ直下へフラットに置き、`yyyymmddnn` 接頭辞で命名する規則を追加した。`bootstrap.sh` と Beads 用の 3 スクリプトのログ名も `yyyymmddnn-<name>.log` へ変更した |
 | v2.20.0 | 2026-09-23 | Codex 版 v1.17.0 に追従した。技術ブログの執筆戦略、初稿、改稿、校正に使う `technical-blog-writing` スキルを追加し、読者の悩みを起点にした執筆戦略、主張と証拠の対応、題名と `excerpt` の書き方、考察の書き方、改稿時の横展開を収録した。日本語の記法はスキルへ複製せず、`documentation.md` を参照させる。文書全般に通用する記法は `documentation.md` へ統合し、一文に複数の主張を詰め込まないこと、情報の増えない先回りの否定を書かないこと、造語を避けること、用語を初出時に説明すること、同格の名詞を中点で区切ること、数値に単位を添えて割合は残存割合で示すこと、根拠の抜粋を改変せず省略を明示することを追加した。Codex 版は共通ルールへスキルの呼出し条件を足したが、Claude Code ではスキルの description で起動が決まるため、常時注入されるルールには足していない。`bootstrap.sh` は `skills/` 配下のスキルをすべて配置する形へ変更した |

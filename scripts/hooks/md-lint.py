@@ -52,6 +52,9 @@ def within(path, root):
 
 
 def main():
+    # Claude Code は UTF-8 で渡し、UTF-8 で読む。Windows の既定 (cp932) のままだと日本語を読み違え、違反を見逃す
+    sys.stdin.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:

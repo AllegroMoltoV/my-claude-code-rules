@@ -22,6 +22,9 @@ def tokens(command):
 
 
 def main():
+    # Claude Code は UTF-8 で渡し、UTF-8 で読む。Windows の既定 (cp932) のままだと日本語が化ける
+    sys.stdin.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError:

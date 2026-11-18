@@ -181,7 +181,7 @@ if [ "${HAS_RULES_REPO}" -eq 1 ] && [ -f "${RULES_REPO}/exclude" ]; then
 fi
 
 # 作業ディレクトリ
-for d in .appendix .tmp .logs .prompts/PLANS .prompts/DISCUSSIONS docs/reports docs/logs; do
+for d in .appendix .tmp .logs .reports .prompts/PLANS .prompts/DISCUSSIONS; do
   if [ -d "${d}" ]; then
     echo "  [skip] ディレクトリは作成済み: ${d}"
   else
@@ -198,11 +198,11 @@ else
   echo "  [run ] .prompts/INIT.md を配置した"
 fi
 
-# docs/INDEX.md の雛形
-if [ -f docs/INDEX.md ]; then
-  echo "  [skip] docs/INDEX.md は作成済み"
+# 索引の雛形。題名に顧客名が入りうるため、除外済みの .reports/ に置く
+if [ -f .reports/INDEX.md ]; then
+  echo "  [skip] .reports/INDEX.md は作成済み"
 else
-  cat > docs/INDEX.md <<'INDEXEOF'
+  cat > .reports/INDEX.md <<'INDEXEOF'
 # 文書索引
 
 context compaction で文脈が失われた場合は、この索引から必要な文書をたどる。
@@ -211,15 +211,14 @@ context compaction で文脈が失われた場合は、この索引から必要�
 |---|---|
 | プロジェクトの目的と使い方 | `README.md` |
 | 要件と初回セットアップの指示 | `.prompts/INIT.md` |
-| 調査レポート | `docs/reports/` |
+| 調査レポートと残す価値があると判断した実行ログ (git 追跡対象外) | `.reports/` |
 | 実行ログ (生の出力。git 追跡対象外) | `.logs/` |
-| 実行ログ (残す価値があると判断したもの) | `docs/logs/` |
 | 計画と決定事項 (Beads 使用時の正本) | `bd show <親課題>` |
 | 計画 (Beads 非使用時) | `.prompts/PLANS/` |
 | 判断を要する論点 (Beads 非使用時) | `.prompts/DISCUSSIONS/` |
 | タスクの状態、依存関係、ブロッカー | `bd ready` / `bd blocked` / `bd list` |
 INDEXEOF
-  echo "  [run ] docs/INDEX.md の雛形を作成した"
+  echo "  [run ] .reports/INDEX.md の雛形を作成した"
 fi
 
 # rules のプロジェクトへのコピー (任意)。他マシンへ持ち出す用途のため symlink ではなく実体を置く。

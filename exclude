@@ -4,5 +4,6 @@
 .vscode
 .tmp
 .logs
+.reports
 .claude
 CLAUDE.md

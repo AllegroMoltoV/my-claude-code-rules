@@ -23,9 +23,9 @@ bash "${MY_CLAUDE_RULES}/scripts/bootstrap.sh"
 - `~/.claude/rules/` へのルール配置と、本 skill の symlink 登録
 - git リポジトリの初期化 (ブランチは main)
 - `.git/info/exclude` への除外設定の追記
-- `.appendix`、`.tmp`、`.logs`、`.prompts/PLANS`、`.prompts/DISCUSSIONS`、`docs/reports`、`docs/logs` の作成 (`.prompts/PLANS` と `.prompts/DISCUSSIONS` は Beads を使わないプロジェクト向け)
+- `.appendix`、`.tmp`、`.logs`、`.prompts/PLANS`、`.prompts/DISCUSSIONS`、`.reports` の作成 (`.prompts/PLANS` と `.prompts/DISCUSSIONS` は Beads を使わないプロジェクト向け)
 - `.prompts/INIT.md` の配置
-- `docs/INDEX.md` の雛形作成
+- `.reports/INDEX.md` の雛形作成
 - Beads の初期化 (`bd init --stealth --skip-agents --non-interactive --init-if-missing`)
 
 出力の `[warn]` は必ず依頼者に伝える。`[info]` は伝えなくてよい。
@@ -46,7 +46,7 @@ Beads を使わないプロジェクトでは、先に `touch .beads-optout` を
 - 利用可能な MCP サーバーがあれば参照系の操作で外部情報も収集する
 - 公式ドキュメント、既存の設定ファイル、依存関係の確認
 
-調査結果は `docs/reports/` に保存し、`docs/INDEX.md` に 1 行追記する。
+調査結果は `.reports/` に保存し、`.reports/INDEX.md` に 1 行追記する。
 
 委譲と、推測と事実の書き分けは `project.md` と `working-principles.md` にしたがう。
 

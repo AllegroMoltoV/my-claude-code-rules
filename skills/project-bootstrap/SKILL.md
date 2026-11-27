@@ -23,7 +23,7 @@ bash "${MY_CLAUDE_RULES}/scripts/bootstrap.sh"
 - `~/.claude/rules/` へのルール配置と、本 skill の symlink 登録
 - git リポジトリの初期化 (ブランチは main)
 - `.git/info/exclude` への除外設定の追記
-- `.appendix`、`.tmp`、`.logs`、`.prompts/PLANS`、`.prompts/DISCUSSIONS`、`.reports` の作成 (`.prompts/PLANS` と `.prompts/DISCUSSIONS` は Beads を使わないプロジェクト向け)
+- `.appendix`、`.tmp`、`.logs`、`.prompts/PLANS`、`.prompts/DISCUSSIONS`、`.prompts/MANUALS`、`.reports` の作成 (`.prompts/PLANS` と `.prompts/DISCUSSIONS` は Beads を使わないプロジェクト向け)
 - `.prompts/INIT.md` の配置
 - `.reports/INDEX.md` の雛形作成
 - Beads の初期化 (`bd init --stealth --skip-agents --non-interactive --init-if-missing`)

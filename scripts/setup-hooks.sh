@@ -10,24 +10,23 @@
 # 実行内容
 #   1. jq と python3 の導入確認
 #   2. ~/.claude/settings.json のバックアップ (初回のみ)
-#   3. PreToolUse (Bash) に bash-guard.py、PostToolUse (Write と Edit) に md-lint.py を登録
+#   3. PreToolUse から bash-guard.py の登録を取り除き、PostToolUse (Write と Edit) に md-lint.py を登録
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="${REPO_ROOT}/.logs"
 mkdir -p "${LOG_DIR}"
-# ログ名は yyyymmddnn-<name>.log。nn は同じ日付・同じディレクトリ内の連番。
-LOG_DAY="$(date +%Y%m%d)"
+# ログ名は yyyy-mm-dd-nnnn-<name>.log。nnnn は同じ日付・同じディレクトリ内の連番。
+LOG_DAY="$(date +%Y-%m-%d)"
 LOG_SEQ=1
-while compgen -G "${LOG_DIR}/${LOG_DAY}$(printf '%02d' "${LOG_SEQ}")-*" >/dev/null; do LOG_SEQ=$((LOG_SEQ + 1)); done
-LOG_FILE="$(printf '%s/%s%02d-setup-hooks.log' "${LOG_DIR}" "${LOG_DAY}" "${LOG_SEQ}")"
+while compgen -G "${LOG_DIR}/${LOG_DAY}-$(printf '%04d' "${LOG_SEQ}")-*" >/dev/null; do LOG_SEQ=$((LOG_SEQ + 1)); done
+LOG_FILE="$(printf '%s/%s-%04d-setup-hooks.log' "${LOG_DIR}" "${LOG_DAY}" "${LOG_SEQ}")"
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
 CLAUDE_DIR="${HOME}/.claude"
 SETTINGS="${CLAUDE_DIR}/settings.json"
 BACKUP="${CLAUDE_DIR}/settings.json.pre-hooks.bak"
-BASH_GUARD="${REPO_ROOT}/scripts/hooks/bash-guard.py"
 MD_LINT="${REPO_ROOT}/scripts/hooks/md-lint.py"
 
 echo "=== 規約フックのグローバル導入 $(date '+%Y-%m-%d %H:%M:%S') ==="
@@ -62,16 +61,16 @@ fi
 # setup-beads.sh の Stop フックと同じく、スクリプト名で既存のエントリを判定する。
 # リポジトリを移設してもエントリが重複しないよう、該当するエントリを取り除いてから
 # 現在のパスで 1 件だけ追加する。ほかのフックには触れない。
+# 撤去した bash-guard.py の登録が残っていれば取り除く。PreToolUse が空になればキーごと消す。
 TMP="$(mktemp)"
-jq --arg guard "${BASH_GUARD}" --arg lint "${MD_LINT}" '
+jq --arg lint "${MD_LINT}" '
   def has_script($name): (.hooks // []) | map(.command? // "") | any(endswith($name));
   .hooks //= {}
-  | .hooks.PreToolUse //= []
   | .hooks.PostToolUse //= []
-  | .hooks.PreToolUse |= (
-      map(select(has_script("bash-guard.py") | not))
-      + [{"matcher": "Bash", "hooks": [{"type": "command", "command": $guard}]}]
-    )
+  | if (.hooks | has("PreToolUse")) then
+      .hooks.PreToolUse |= map(select(has_script("bash-guard.py") | not))
+      | if (.hooks.PreToolUse | length) == 0 then del(.hooks.PreToolUse) else . end
+    else . end
   | .hooks.PostToolUse |= (
       map(select(has_script("md-lint.py") | not))
       + [{"matcher": "Write|Edit", "hooks": [{"type": "command", "command": $lint}]}]
@@ -94,8 +93,8 @@ else
 fi
 
 echo
-echo "=== 導入後の PreToolUse と PostToolUse ==="
-jq '{PreToolUse: .hooks.PreToolUse, PostToolUse: .hooks.PostToolUse}' "${SETTINGS}"
+echo "=== 導入後の PostToolUse ==="
+jq '{PostToolUse: .hooks.PostToolUse}' "${SETTINGS}"
 echo
 echo "完了。ログ: ${LOG_FILE}"
 echo "Claude Code を再起動すると反映される。"

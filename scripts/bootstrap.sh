@@ -52,12 +52,12 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# ログ名は yyyymmddnn-<name>.log。nn は同じ日付・同じディレクトリ内の連番。
+# ログ名は yyyy-mm-dd-nnnn-<name>.log。nnnn は同じ日付・同じディレクトリ内の連番。
 next_log() {
   local dir="$1" name="$2" day n=1
-  day="$(date +%Y%m%d)"
-  while compgen -G "${dir}/${day}$(printf '%02d' "${n}")-*" >/dev/null; do n=$((n + 1)); done
-  printf '%s/%s%02d-%s.log' "${dir}" "${day}" "${n}" "${name}"
+  day="$(date +%Y-%m-%d)"
+  while compgen -G "${dir}/${day}-$(printf '%04d' "${n}")-*" >/dev/null; do n=$((n + 1)); done
+  printf '%s/%s-%04d-%s.log' "${dir}" "${day}" "${n}" "${name}"
 }
 
 # ログの置き場所はフェーズで変わる。--global-only では対象プロジェクトが無いため、
@@ -181,7 +181,7 @@ if [ "${HAS_RULES_REPO}" -eq 1 ] && [ -f "${RULES_REPO}/exclude" ]; then
 fi
 
 # 作業ディレクトリ
-for d in .appendix .tmp .logs .reports .prompts/PLANS .prompts/DISCUSSIONS; do
+for d in .appendix .tmp .logs .reports .prompts/PLANS .prompts/DISCUSSIONS .prompts/MANUALS; do
   if [ -d "${d}" ]; then
     echo "  [skip] ディレクトリは作成済み: ${d}"
   else
@@ -216,6 +216,8 @@ context compaction で文脈が失われた場合は、この索引から必要�
 | 計画と決定事項 (Beads 使用時の正本) | `bd show <親課題>` |
 | 計画 (Beads 非使用時) | `.prompts/PLANS/` |
 | 判断を要する論点 (Beads 非使用時) | `.prompts/DISCUSSIONS/` |
+| 依頼者向けの手順書 | `.prompts/MANUALS/` |
+| 依頼者に見てもらうファイル (スクリーンショット、図案、zip) | `.appendix/YYYY-MM-DD/` |
 | タスクの状態、依存関係、ブロッカー | `bd ready` / `bd blocked` / `bd list` |
 INDEXEOF
   echo "  [run ] .reports/INDEX.md の雛形を作成した"
